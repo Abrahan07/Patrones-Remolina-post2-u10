@@ -1,0 +1,38 @@
+name: CI con SonarQube
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: maven
+
+      - name: Compilar y ejecutar pruebas
+        run: mvn -B clean verify --no-transfer-progress
+
+      - name: Generar reporte JaCoCo
+        run: mvn jacoco:report
+
+      - name: Mostrar resumen de cobertura
+        run: |
+          echo "### Resultados de pruebas y cobertura" >> $GITHUB_STEP_SUMMARY
+          echo "Compilacion exitosa" >> $GITHUB_STEP_SUMMARY
+          echo "Tests ejecutados correctamente" >> $GITHUB_STEP_SUMMARY
+          echo "Reporte JaCoCo generado en target/site/jacoco/" >> $GITHUB_STEP_SUMMARY
+          echo "Analisis SonarQube ejecutado localmente con Docker" >> $GITHUB_STEP_SUMMARY
