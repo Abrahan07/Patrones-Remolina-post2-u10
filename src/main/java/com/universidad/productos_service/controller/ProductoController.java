@@ -2,18 +2,22 @@ package com.universidad.productos_service.controller;
 
 import com.universidad.productos_service.domain.Producto;
 import com.universidad.productos_service.service.ProductoService;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @RestController
 @RequestMapping("/api/productos")
 public class ProductoController {
 
-    // Code Smell: inyección por campo en lugar de constructor
-    @Autowired
-    private ProductoService service;
+    // Corrección: inyección por constructor en lugar de @Autowired en campo
+    private final ProductoService service;
+
+    public ProductoController(ProductoService service) {
+        this.service = service;
+    }
 
     @GetMapping
     public List<Producto> listar() {
@@ -21,8 +25,11 @@ public class ProductoController {
     }
 
     @GetMapping("/{id}")
-    public Producto buscar(@PathVariable Long id) {
-        // Bug: puede retornar null al cliente sin manejo de error
-        return service.buscar(id);
+    public ResponseEntity<Producto> buscar(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(service.buscar(id));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 }

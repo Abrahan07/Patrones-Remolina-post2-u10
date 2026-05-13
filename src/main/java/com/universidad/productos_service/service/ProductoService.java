@@ -2,51 +2,51 @@ package com.universidad.productos_service.service;
 
 import com.universidad.productos_service.domain.Producto;
 import com.universidad.productos_service.repository.ProductoRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @Service
 public class ProductoService {
 
-    // Code Smell: campo no final (debería ser inyección por constructor)
-    @Autowired
-    private ProductoRepository repo; // Code Smell: nombre genérico
+    // Corrección 1: inyección por constructor en lugar de @Autowired en campo
+    private final ProductoRepository productoRepository;
 
-    // Code Smell: método largo con múltiples responsabilidades (CC alta)
-    public Producto procesarProducto(String n, Double p, Integer s,
-                                     String cat, boolean activo, String proveedor) {
+    public ProductoService(ProductoRepository productoRepository) {
+        this.productoRepository = productoRepository;
+    }
+
+    // Corrección 2: método extraído para reducir complejidad ciclomática
+    private void validarDatos(String nombre, Double precio, Integer stock) {
+        if (nombre == null || nombre.isBlank()) // Corrección 3: isBlank() en lugar de equals("")
+            throw new IllegalArgumentException("El nombre no puede estar vacío");
+        if (precio == null || precio <= 0)
+            throw new IllegalArgumentException("El precio debe ser mayor a cero");
+        if (precio > 999999)
+            throw new IllegalArgumentException("El precio excede el máximo permitido");
+        if (stock == null || stock < 0)
+            throw new IllegalArgumentException("El stock no puede ser negativo");
+    }
+
+    // Método principal reducido a orquestación
+    public Producto procesarProducto(String nombre, Double precio, Integer stock) {
+        validarDatos(nombre, precio, stock);
         Producto producto = new Producto();
-
-        if (n == null || n.equals("")) { // Code Smell: usar isBlank()
-            throw new IllegalArgumentException("nombre requerido");
-        }
-        if (p == null) {
-            throw new IllegalArgumentException("precio requerido");
-        } else if (p <= 0) {
-            throw new IllegalArgumentException("precio invalido");
-        } else if (p > 999999) {
-            throw new IllegalArgumentException("precio excesivo");
-        }
-        if (s == null || s < 0) {
-            throw new IllegalArgumentException("stock invalido");
-        }
-
-        producto.setNombre(n);
-        producto.setPrecio(p);
-        producto.setStock(s);
-
-        // TODO: implementar lógica de categoría y proveedor
-        return repo.save(producto);
+        producto.setNombre(nombre.strip());
+        producto.setPrecio(precio);
+        producto.setStock(stock);
+        return productoRepository.save(producto);
     }
 
     public List<Producto> listar() {
-        return repo.findAll();
+        return productoRepository.findAll();
     }
 
-    // Bug: no lanza excepción si el producto no existe
+    // Corrección del Bug: lanza excepción en lugar de retornar null
     public Producto buscar(Long id) {
-        return repo.findById(id).orElse(null); // Bug: retorna null
+        return productoRepository.findById(id)
+                .orElseThrow(() ->
+                        new NoSuchElementException("Producto no encontrado: " + id));
     }
 }
